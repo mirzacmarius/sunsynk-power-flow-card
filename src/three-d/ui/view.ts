@@ -548,8 +548,26 @@ export class Sunsynk3DView extends LitElement {
 
 	private placeLabels(labels: ProjectedLabel[]): void {
 		const root = this.renderRoot as ShadowRoot;
-		const placed: { x0: number; x1: number; y0: number; y1: number }[] = [];
 		const stageW = this.stageEl?.clientWidth ?? 0;
+		// the overlays drawn over the scene: labels move up off the preset chips and the
+		// legend (like off other labels) and down below the toolbar groups
+		const stage = this.stageEl?.getBoundingClientRect();
+		const boxes = (sel: string) =>
+			stage
+				? [...root.querySelectorAll<HTMLElement>(sel)]
+						.map((e) => {
+							const r = e.getBoundingClientRect();
+							return {
+								x0: r.left - stage.left,
+								x1: r.right - stage.left,
+								y0: r.top - stage.top,
+								y1: r.bottom - stage.top,
+							};
+						})
+						.filter((b) => b.x1 > b.x0 && b.y1 > b.y0)
+				: [];
+		const placed = boxes('.presets .chip, .legend');
+		const tools = boxes('.toolbar .group');
 		// nearest (lowest on screen) first, so labels further back move up out of the way
 		const items = labels
 			.map((l) => {
@@ -590,6 +608,13 @@ export class Sunsynk3DView extends LitElement {
 				if (!hit) break;
 				y = hit.y0 - 2;
 			}
+			for (const t of tools)
+				if (
+					l.x - w / 2 - 3 < t.x1 &&
+					l.x + w / 2 + 3 > t.x0 &&
+					y - h - 2 < t.y1
+				)
+					y = Math.max(y, t.y1 + h + 4);
 			placed.push({
 				x0: l.x - w / 2 - 3,
 				x1: l.x + w / 2 + 3,

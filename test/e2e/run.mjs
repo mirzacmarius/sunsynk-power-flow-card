@@ -94,6 +94,38 @@ async function open(query = '', viewport = { width: 1440, height: 900 }, init) {
   return { page, errors };
 }
 
+/** Visible 3D labels that overlap a toolbar group, a preset chip or the legend. */
+const labelClashes = (page) =>
+  page.evaluate(() => {
+    const root = document
+      .querySelector('sunsynk-power-flow-card-3d')
+      .shadowRoot.querySelector('sunsynk-3d-view').shadowRoot;
+    const stage = root.querySelector('.stage').getBoundingClientRect();
+    const rects = (sel) =>
+      [...root.querySelectorAll(sel)]
+        .map((e) => [e, e.getBoundingClientRect()])
+        .filter(
+          ([, r]) =>
+            r.width > 0 &&
+            r.right > stage.left &&
+            r.left < stage.right &&
+            r.bottom > stage.top &&
+            r.top < stage.bottom,
+        );
+    const overlays = rects('.toolbar .group, .presets .chip, .legend');
+    const out = [];
+    for (const [l, a] of rects('.labels .label'))
+      for (const [o, b] of overlays)
+        if (
+          a.left < b.right - 1 &&
+          a.right > b.left + 1 &&
+          a.top < b.bottom - 1 &&
+          a.bottom > b.top + 1
+        )
+          out.push(`${l.dataset.id} × ${o.className}`);
+    return out;
+  });
+
 const info = (page) =>
   page.evaluate(() =>
     document
@@ -456,6 +488,11 @@ try {
       overflow <= 1,
       `overflow ${overflow}px`,
     );
+    check(
+      'phone: 3D labels stay clear of the toolbar and preset chips',
+      (await labelClashes(m.page)).length === 0,
+      (await labelClashes(m.page)).join(', '),
+    );
     await shot(m.page, '13-phone');
     await m.page.close();
     // summary tiles fit the longest values ("Disconnected" / "Deconectată") at every width
@@ -492,6 +529,11 @@ try {
       width: 820,
       height: 1180,
     });
+    check(
+      'tablet: 3D labels stay clear of the toolbar and preset chips',
+      (await labelClashes(tb.page)).length === 0,
+      (await labelClashes(tb.page)).join(', '),
+    );
     await shot(tb.page, '14-tablet');
     await tb.page.close();
   }
