@@ -271,7 +271,7 @@ export const CARD_CONFIG = {
 						type: 'tv',
 						power: 'sensor.tv_matrimonial_power',
 						energy: 'sensor.tv_matrimonial_energy',
-						state: 'media_player.samsung_qn85aa_55_tv',
+						state: 'media_player.samsung_qn85aa_55_tv_qe55qn85aatxxh',
 					},
 				],
 			},

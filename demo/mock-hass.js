@@ -569,7 +569,7 @@ export function buildStates(name, { jitter = false } = {}) {
 			current_temperature: 20.6,
 		},
 	});
-	put('media_player.samsung_qn85aa_55_tv', {
+	put('media_player.samsung_qn85aa_55_tv_qe55qn85aatxxh', {
 		state: typeof d.tv === 'number' && d.tv > 20 ? 'on' : 'off',
 		attributes: { friendly_name: 'Samsung QN85A 55' },
 	});

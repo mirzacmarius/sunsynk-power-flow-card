@@ -1,6 +1,6 @@
 # Verification
 
-What was run for this version (7.3.3-3d.2), on macOS (Apple M4 Max), Node 24,
+What was run for this version (7.3.3-3d.6), on macOS (Apple M4 Max), Node 24,
 Chrome for Testing (headless, GPU WebGL through ANGLE/Metal), a throwaway Home
 Assistant Core 2026.10.2 and Marius's own Home Assistant (2026.10.2).
 
@@ -8,7 +8,7 @@ Assistant Core 2026.10.2 and Marius's own Home Assistant (2026.10.2).
 
 | Check                                            | Result                                                                                        |
 | ------------------------------------------------ | --------------------------------------------------------------------------------------------- |
-| `npm run build` (Rollup + rpt2 + Babel + Terser) | passes; entry 0.1 KB, core 715 KB (267 KB gzip), 3D scene 894 KB (232 KB gzip), editor 106 KB |
+| `npm run build` (Rollup + rpt2 + Babel + Terser) | passes; entry 0.1 KB, core 715 KB (267 KB gzip), 3D scene 895 KB (231 KB gzip), editor 106 KB |
 | `npm run typecheck` (`tsc --noEmit`)             | 0 errors                                                                                      |
 | ESLint + Prettier on all new and changed files   | 0 errors (upstream components keep their existing formatting warnings)                        |
 | `npm test` (Vitest, data adapter)                | 21 / 21                                                                                       |
@@ -23,7 +23,7 @@ statistics, and night mode from `sun.sun`.
 
 ## Browser checks against simulated states (`npm run test:e2e`)
 
-46 / 46, using the demo page with Marius's configuration and simulated states:
+52 / 52, using the demo page with Marius's configuration and simulated states:
 
 - WebGL rendering (≈ 220 draw calls at `high` quality); every flow's activity and
   direction for sunny export, evening discharge (40 W import shown as import),
@@ -34,7 +34,8 @@ statistics, and night mode from `sun.sun`.
 - Presets (overview, solar with overlay, battery & inverter, room consumption
   with exploded floors and device branches, night), ground/first floor selection
   with semi-transparent upper floors, device detail panel, control with
-  confirmation calling `switch.toggle`, and no control for unconfigured devices.
+  confirmation calling `switch.toggle`, and no control for unconfigured devices;
+  a running AC shows its mode and action, one that is off shows no mode row.
 - Classic ↔ 3D switching in place (toolbar, 3D button, repeated `view_mode`
   changes) with exactly one canvas left; leaving 3D disposes the renderer
   (context lost), stops the loop and removes the canvas; the loop pauses when
@@ -48,6 +49,10 @@ statistics, and night mode from `sun.sun`.
   horizontal overflow, tablet layout.
 - A DOM walk up from inside the card through `.host` / `parentNode` (what
   card-mod does) terminates.
+- The summary tiles fit their longest values ("Disconnected" / "Deconectată")
+  at every card width from 390 to 1700 px in both languages, and on the phone
+  and tablet layouts no 3D label overlaps another label, the toolbar, the preset
+  chips or the legend.
 
 Screenshots: [screenshots/](screenshots/).
 
@@ -75,13 +80,24 @@ shared core chunk.
 
 ## On Marius's Home Assistant
 
-Installed on 2026-10-19 with his approval; no dashboard was changed.
+Installed on 2026-10-19 with his approval, then added to the _Energie_ view of
+`/home-dashboard` when he asked.
 
 - Files: `/config/www/sunsynk-power-flow-card-3d/` (the four `.js` files of this
   build, byte-identical to `dist/`). Resource:
-  `/local/sunsynk-power-flow-card-3d/sunsynk-power-flow-card-3d.js?v=7.3.3-3d.2`
+  `/local/sunsynk-power-flow-card-3d/sunsynk-power-flow-card-3d.js?v=7.3.3-3d.6`
   (module). The HACS resource of the upstream card is unchanged; the resource
-  list was backed up first (`audit/` in the HA workspace).
+  list and the dashboard were backed up first (`audit/` in the HA workspace).
+- Dashboard: a full-width _Casa 3D_ section under the existing _Invertor Solis
+  S6-EH3P_ and _Acum_ sections; nothing else on the dashboard changed (checked by
+  comparing the saved config with the backup). The card config is the example
+  one plus the existing card's `inverter_image`, with the TV state taken from
+  `media_player.samsung_qn85aa_55_tv_qe55qn85aatxxh` (the DLNA entity is
+  unavailable while the TV is off). All 69 entity ids it uses exist.
+- The saved view in a browser at 1600 px (desktop) and 390 px (phone): both
+  Sunsynk cards render, the 3D view runs (≈ 230 draw calls), no tile text is cut
+  off, no label overlaps the overlays, the Daikin panel shows _Stare: Oprit_
+  without an untranslated mode row, and the console has no errors.
 - Both `custom:sunsynk-power-flow-card` and `custom:sunsynk-power-flow-card-3d`
   register, and the existing Sunsynk card on the _Energie_ view still renders.
 - A temporary card (never saved, removed afterwards) with the example
@@ -95,15 +111,26 @@ Installed on 2026-10-19 with his approval; no dashboard was changed.
   in the real lights' warm white (`light.lumini_balcoane` and
   `light.lumini_terasa` were on at ≈ 3900 K), no errors in the console.
 
-This found and fixed one real bug: with card-mod installed the 3D view crashed
-with _Maximum call stack size exceeded_, because a view property named `host`
-made card-mod's walk up the DOM (which prefers `.host`, the shadow root's host)
-loop forever. The property was renamed and the e2e suite now checks the walk.
+This found and fixed real bugs:
+
+- With card-mod installed the 3D view crashed with _Maximum call stack size
+  exceeded_, because a view property named `host` made card-mod's walk up the
+  DOM (which prefers `.host`, the shadow root's host) loop forever. The property
+  was renamed and the e2e suite now checks the walk (3d.2).
+- At the dashboard's 1310 px card width the eight-tile summary cut off
+  _Deconectată_ and _Putere baterie_; tiles now switch to four per row below
+  1600 px (3d.3).
+- On a phone the solar label sat under the toolbar, then on top of the battery
+  label; labels now avoid the overlays and sit beside a label in their way
+  (3d.4, 3d.5).
+- The AC panel showed a second, untranslated status row (_off · off_); it is now
+  a _Mode_ row formatted by Home Assistant, shown only when the device does more
+  than on/off (3d.6).
 
 ## Not verified
 
-- The card on a saved dashboard (it isn't on any yet), and solar production,
-  charging or grid export with the real hardware (the check ran after sunset).
+- Solar production, charging or grid export with the real hardware (every check
+  on Marius's Home Assistant ran after sunset), and a running AC's mode text.
 - Real Solis/Dyness values over a full day, long-term statistics older than the
   test instance, and very long uptimes (memory over days).
 - Safari/iOS and the HA companion apps (only Chromium was automated here).

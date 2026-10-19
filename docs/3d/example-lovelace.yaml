@@ -280,7 +280,7 @@ three_d:
           type: tv
           power: sensor.tv_matrimonial_power
           energy: sensor.tv_matrimonial_energy
-          state: media_player.samsung_qn85aa_55_tv
+          state: media_player.samsung_qn85aa_55_tv_qe55qn85aatxxh
     - name: Dormitor
       floor: first
       bounds: [-5.1, 0.3, 4.8, 6.7]
