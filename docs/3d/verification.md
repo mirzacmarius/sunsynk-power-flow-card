@@ -1,8 +1,8 @@
 # Verification
 
-What was run for this version (7.3.3-3d.1), on macOS (Apple M4 Max), Node 24,
-Chrome for Testing (headless, GPU WebGL through ANGLE/Metal) and Home Assistant
-Core 2026.10.2.
+What was run for this version (7.3.3-3d.2), on macOS (Apple M4 Max), Node 24,
+Chrome for Testing (headless, GPU WebGL through ANGLE/Metal), a throwaway Home
+Assistant Core 2026.10.2 and Marius's own Home Assistant (2026.10.2).
 
 ## Build and static checks
 
@@ -23,7 +23,7 @@ statistics, and night mode from `sun.sun`.
 
 ## Browser checks against simulated states (`npm run test:e2e`)
 
-45 / 45, using the demo page with Marius's configuration and simulated states:
+46 / 46, using the demo page with Marius's configuration and simulated states:
 
 - WebGL rendering (≈ 220 draw calls at `high` quality); every flow's activity and
   direction for sunny export, evening discharge (40 W import shown as import),
@@ -46,6 +46,8 @@ statistics, and night mode from `sun.sun`.
   `light.lumini_balcoane`, room lighting following its light entity, reduced
   motion (no particles), Romanian strings, light theme, phone layout without
   horizontal overflow, tablet layout.
+- A DOM walk up from inside the card through `.host` / `parentNode` (what
+  card-mod does) terminates.
 
 Screenshots: [screenshots/](screenshots/).
 
@@ -71,11 +73,39 @@ the entry module under a different URL, so the card module ran twice and the
 custom element failed to register. The build now uses a facade entry and a
 shared core chunk.
 
+## On Marius's Home Assistant
+
+Installed on 2026-10-19 with his approval; no dashboard was changed.
+
+- Files: `/config/www/sunsynk-power-flow-card-3d/` (the four `.js` files of this
+  build, byte-identical to `dist/`). Resource:
+  `/local/sunsynk-power-flow-card-3d/sunsynk-power-flow-card-3d.js?v=7.3.3-3d.2`
+  (module). The HACS resource of the upstream card is unchanged; the resource
+  list was backed up first (`audit/` in the HA workspace).
+- Both `custom:sunsynk-power-flow-card` and `custom:sunsynk-power-flow-card-3d`
+  register, and the existing Sunsynk card on the _Energie_ view still renders.
+- A temporary card (never saved, removed afterwards) with the example
+  configuration and the real entities, checked after sunset: solar 0 W with the
+  four MPPTs idle (≈ 60–160 V, no fault flagged at night), battery 60 %
+  discharging 556 W from the Solis direction sensor, 12.8 kWh to 10 % and
+  ≈ 23 h runtime (the same as the classic card), grid _Disconnected_ from the
+  grid voltage (no grid animation), home ≈ 400 W, inverter status 3 _Normal_,
+  25.7 °C, today's totals matching the classic card, room and device power from
+  the real sensors, night mode from `sun.sun`, the balcony and terrace washes
+  in the real lights' warm white (`light.lumini_balcoane` and
+  `light.lumini_terasa` were on at ≈ 3900 K), no errors in the console.
+
+This found and fixed one real bug: with card-mod installed the 3D view crashed
+with _Maximum call stack size exceeded_, because a view property named `host`
+made card-mod's walk up the DOM (which prefers `.host`, the shadow root's host)
+loop forever. The property was renamed and the e2e suite now checks the walk.
+
 ## Not verified
 
-- Your real Home Assistant, dashboards and devices: nothing was installed there.
-- Real Solis/Dyness hardware values over a full day, long-term statistics older
-  than the test instance, and very long uptimes (memory over days).
+- The card on a saved dashboard (it isn't on any yet), and solar production,
+  charging or grid export with the real hardware (the check ran after sunset).
+- Real Solis/Dyness values over a full day, long-term statistics older than the
+  test instance, and very long uptimes (memory over days).
 - Safari/iOS and the HA companion apps (only Chromium was automated here).
 - The house against the photo itself: the photo didn't reach this computer, so
   the model follows a written description of it.
