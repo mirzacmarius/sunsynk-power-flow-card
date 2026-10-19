@@ -241,7 +241,7 @@ export class EnvironmentRig {
 			const m = mesh.material as MeshBasicMaterial;
 			m.opacity = 0.85 * level;
 			m.color.set(color ?? fallback);
-			mesh.visible = level > 0.01;
+			mesh.visible = level > 0.01 && !mesh.userData.hidden;
 		};
 		wash(
 			this.house.washes.upperLoggia,

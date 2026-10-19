@@ -425,9 +425,24 @@ export class SceneManager {
 			this.customModel = model;
 			this.house.root.add(model);
 			if (this.three.model.hide_procedural) {
-				this.house.groups.groundArch.visible = false;
-				this.house.groups.firstArch.visible = false;
-				this.house.groups.roofArch.visible = false;
+				const g = this.house.groups;
+				for (const group of [
+					g.groundArch,
+					g.firstArch,
+					g.roofArch,
+					g.groundInterior,
+					g.firstInterior,
+				])
+					group.visible = false;
+				// fittings and light washes are placed for the built-in model
+				for (const w of [
+					this.house.washes.upperLoggia,
+					this.house.washes.lowerWall,
+				]) {
+					w.visible = false;
+					w.userData.hidden = true;
+				}
+				for (const f of this.house.fittings) f.visible = false;
 			}
 			this.cb.onStatus({ quality: this.quality, modelLoaded: true });
 			this.needsRender = true;
@@ -707,7 +722,10 @@ export class SceneManager {
 		this.setGroupMode(g.first, firstMode);
 		this.setGroupMode(g.roofArch, roofMode);
 		this.solar.setGhost(roofMode !== 'show');
-		this.solar.group.visible = true;
+		// looking into a single floor: panels would only clutter the view from above
+		this.solar.group.visible = roofMode !== 'hide';
+		// roof cable runs float once the roof is gone: keep them, but quietly
+		this.flows.setDimmed('mppt', roofMode !== 'show');
 		this.selection?.refresh();
 		this.needsRender = true;
 	}
@@ -861,7 +879,7 @@ export class SceneManager {
 				if (!this.state.exploded)
 					this.setState({ floor: dv.floor === 0 ? 'ground' : 'first' });
 				const c = world(id) ?? new Vector3();
-				pose = this.rig.focusPose(c, 3.2, new Vector3(0.5, 1.1, 1));
+				pose = this.rig.focusPose(c, 4.6, new Vector3(0.45, 1.5, 0.9));
 			}
 		}
 		if (pose) {
@@ -926,10 +944,10 @@ export class SceneManager {
 				const d = this.house.dims;
 				// standing on the lawn in front of the left half, like the reference photo
 				const target = this.house.root.localToWorld(
-					new Vector3((d.xMin + d.xMax) / 2 - 0.5, 3.4, d.Ld - 1),
+					new Vector3((d.xMin + d.xMax) / 2 + 0.6, 3.3, d.Ld - 1),
 				);
 				const position = this.house.root.localToWorld(
-					new Vector3(d.xMin * 0.35, 1.7, d.zMax + 21),
+					new Vector3(d.xMin * 0.3, 1.7, d.zMax + 24),
 				);
 				pose = { position, target };
 				break;

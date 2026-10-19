@@ -465,7 +465,169 @@ try {
     await shot(tb.page, '14-tablet');
     await tb.page.close();
   }
-  // 12. Reduced motion: no particles moving
+  // 12. Hover tooltip, offscreen pause, disposal, custom model, light entities, classic palette
+  {
+    const { page, errors } = await open('scenario=sunny_export');
+    const pt = await page.evaluate(() => {
+      const view = document
+        .querySelector('sunsynk-power-flow-card-3d')
+        .shadowRoot.querySelector('sunsynk-3d-view');
+      const m = view.manager;
+      const a = m.anchors.get('inverter');
+      const v = a.obj.localToWorld(a.local.clone());
+      v.y -= 0.6;
+      v.project(m.camera);
+      const r = m.renderer.domElement.getBoundingClientRect();
+      return {
+        x: r.left + ((v.x + 1) / 2) * r.width,
+        y: r.top + ((1 - v.y) / 2) * r.height,
+      };
+    });
+    await page.mouse.move(pt.x, pt.y);
+    await page.waitForTimeout(600);
+    const tip = await page.evaluate(
+      () =>
+        document
+          .querySelector('sunsynk-power-flow-card-3d')
+          .shadowRoot.querySelector('sunsynk-3d-view')
+          .shadowRoot.querySelector('.tooltip')?.textContent ?? '',
+    );
+    check(
+      'hover tooltip shows live inverter values',
+      /S6-EH3P20K-H/.test(tip) && /W/.test(tip),
+      tip.replace(/\s+/g, ' ').trim().slice(0, 80),
+    );
+    await page.evaluate(() => {
+      document.body.style.paddingBottom = '3000px';
+      window.scrollTo(0, 2600);
+    });
+    await page.waitForTimeout(800);
+    const paused = await page.evaluate(
+      () =>
+        document
+          .querySelector('sunsynk-power-flow-card-3d')
+          .shadowRoot.querySelector('sunsynk-3d-view').manager.running,
+    );
+    check('render loop pauses when the card is off-screen', paused === false);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.waitForTimeout(600);
+    const disposed = await page.evaluate(async () => {
+      const card = document.querySelector('sunsynk-power-flow-card-3d');
+      const view = card.shadowRoot.querySelector('sunsynk-3d-view');
+      const m = view.manager;
+      const gl = m.renderer.getContext();
+      view.shadowRoot
+        .querySelector('.tool[title="Switch to the classic card"]')
+        .click();
+      await new Promise((r) => setTimeout(r, 600));
+      return {
+        disposed: m.disposed,
+        running: m.running,
+        lost: gl.isContextLost(),
+        canvas: m.renderer.domElement.isConnected,
+      };
+    });
+    check(
+      'leaving 3D disposes renderer, loop and canvas',
+      disposed.disposed &&
+        !disposed.running &&
+        disposed.lost &&
+        !disposed.canvas,
+      JSON.stringify(disposed),
+    );
+    const classic = await page.evaluate(() => {
+      const svg = document
+        .querySelector('sunsynk-power-flow-card-3d')
+        .shadowRoot.querySelector('svg');
+      return svg ? svg.innerHTML.includes('#FFA500') : false;
+    });
+    check('classic view applies the dark palette colours', classic);
+    await page.evaluate(() =>
+      document
+        .querySelector('sunsynk-power-flow-card-3d')
+        .shadowRoot.querySelector('.s3d-toggle')
+        .click(),
+    );
+    await page.waitForTimeout(1200);
+    await page.evaluate(() => {
+      const c = structuredClone(window.card._config);
+      c.three_d = {
+        ...c.three_d,
+        model: {
+          url: '/demo/assets/test-model.gltf',
+          position: [-2.05, 0, 7.4],
+        },
+      };
+      window.card.setConfig(c);
+    });
+    await page.waitForTimeout(2500);
+    const model = await page.evaluate(() => {
+      const m = document
+        .querySelector('sunsynk-power-flow-card-3d')
+        .shadowRoot.querySelector('sunsynk-3d-view').manager;
+      return {
+        loaded: !!m.customModel,
+        procedural: m.house.groups.groundArch.visible,
+      };
+    });
+    check(
+      'GLB/glTF model loads and replaces the procedural house',
+      model.loaded && !model.procedural,
+      JSON.stringify(model),
+    );
+    await shot(page, '15-custom-model');
+    check(
+      'no console errors (lifecycle)',
+      errors.length === 0,
+      errors.join(' | '),
+    );
+    await page.close();
+  }
+  {
+    const { page } = await open('scenario=evening_discharge');
+    const lit = () =>
+      page.evaluate(
+        () =>
+          document
+            .querySelector('sunsynk-power-flow-card-3d')
+            .shadowRoot.querySelector('sunsynk-3d-view').manager.house.washes
+            .upperLoggia.material.opacity,
+      );
+    await page.waitForTimeout(1500);
+    const on = await lit();
+    await page.evaluate(() => {
+      const s = window.mock.states['light.lumini_balcoane'];
+      window.mock.overrides['light.lumini_balcoane'] = { ...s, state: 'off' };
+      window.mock.refresh();
+    });
+    await page.waitForTimeout(1500);
+    const off = await lit();
+    check(
+      'loggia wash follows light.lumini_balcoane',
+      on > 0.3 && off < 0.05,
+      `on ${on.toFixed(2)} / off ${off.toFixed(2)}`,
+    );
+    await page.evaluate(() => {
+      const s = window.mock.states['light.lumini_matrimonial'];
+      window.mock.overrides['light.lumini_matrimonial'] = { ...s, state: 'on' };
+      window.mock.refresh();
+    });
+    await page.waitForTimeout(1500);
+    const room = await page.evaluate(() => {
+      const r = document
+        .querySelector('sunsynk-power-flow-card-3d')
+        .shadowRoot.querySelector('sunsynk-3d-view')
+        .manager.rooms.rooms.get('matrimonial');
+      return { level: r.lightLevel, light: r.light ? r.light.intensity : null };
+    });
+    check(
+      'room lighting follows its light entity',
+      room.level > 0.5,
+      JSON.stringify(room),
+    );
+    await page.close();
+  }
+  // 13. Reduced motion: no particles moving
   {
     const { page } = await open('scenario=sunny_export&motion=true');
     const moving = await page.evaluate(() => {

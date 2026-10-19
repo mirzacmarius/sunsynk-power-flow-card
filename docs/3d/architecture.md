@@ -36,7 +36,11 @@ hass ──► SunsynkPowerFlowCard.render()
 ```
 
 The 3D chunk is loaded with a dynamic `import()` the first time 3D is shown, so a
-classic-only dashboard never downloads Three.js. Switching views (toolbar button,
+classic-only dashboard never downloads Three.js. The build has a tiny entry file
+that re-exports a shared _core_ chunk (the card); both the entry and the 3D
+_scene_ chunk import the core by plain relative URL. Home Assistant adds
+cache-busting queries (`?v=`, `?hacstag=`) to the resource URL only, so a chunk
+that imported the entry itself would load the card module twice. Switching views (toolbar button,
 or editing `view_mode`) re-renders in place; the scene disposes all GPU resources,
 listeners, observers and animation frames when it leaves the DOM.
 

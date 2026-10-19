@@ -1015,6 +1015,52 @@ export function buildHouse(spec: HouseSpec, mats: MaterialLibrary): HouseModel {
 	disc.name = 'terrain';
 	site.add(disc);
 
+	// soft contact shadow under the footprint (cheap ambient-occlusion stand-in)
+	{
+		const pad = 3;
+		const x0 = xMin - pad;
+		const z0 = -pad;
+		const w = Rw - xMin + pad * 2;
+		const dpt = frameFront + pad * 2;
+		const px = 512 / Math.max(w, dpt);
+		const c = document.createElement('canvas');
+		c.width = Math.ceil(w * px);
+		c.height = Math.ceil(dpt * px);
+		const ctx = c.getContext('2d')!;
+		ctx.fillStyle = '#000000';
+		ctx.fillRect(0, 0, c.width, c.height);
+		ctx.shadowColor = '#ffffff';
+		ctx.shadowBlur = 0.9 * px;
+		ctx.fillStyle = '#ffffff';
+		const rect = (ax: number, az: number, bx: number, bz: number) =>
+			ctx.fillRect(
+				(ax - x0) * px,
+				(az - z0) * px,
+				(bx - ax) * px,
+				(bz - az) * px,
+			);
+		rect(-Lw, 0, 0, gFront);
+		rect(0, 0, Rw, Rd);
+		const tex = new CanvasTexture(c);
+		owned.push(tex);
+		const mat = mats.track(
+			new MeshBasicMaterial({
+				color: '#000000',
+				alphaMap: tex,
+				transparent: true,
+				opacity: 0.32,
+				depthWrite: false,
+			}),
+		);
+		const plane = new Mesh(new PlaneGeometry(w, dpt), mat);
+		owned.push(plane.geometry);
+		plane.rotation.x = -Math.PI / 2;
+		plane.position.set(x0 + w / 2, -0.015, z0 + dpt / 2);
+		plane.renderOrder = 0;
+		plane.name = 'contact-shadow';
+		site.add(plane);
+	}
+
 	// =====================================================================
 	// LIGHTING FIXTURES & WASHES (exterior)
 	// =====================================================================

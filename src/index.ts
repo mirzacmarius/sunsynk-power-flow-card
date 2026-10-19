@@ -2864,7 +2864,7 @@ export class SunsynkPowerFlowCard extends LitElement {
 	private _loadThreeD(): void {
 		if (this._threeDStatus !== 'idle') return;
 		this._threeDStatus = 'loading';
-		import('./three-d/index')
+		import('./three-d/view-entry')
 			.then(() => {
 				this._threeDStatus = 'ready';
 			})

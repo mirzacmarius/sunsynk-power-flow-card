@@ -54,12 +54,16 @@ export default {
     dir: 'dist',
     format: 'esm',
     entryFileNames: '[name].js',
-    chunkFileNames: (chunk) =>
-      `sunsynk-power-flow-card-3d-${chunk.name === 'index' ? 'scene' : chunk.name}-[hash].js`,
+    // The entry file stays a tiny facade: the card lives in a shared "core" chunk that
+    // the entry and the 3D chunk both import by plain relative URL. Home Assistant adds
+    // cache-busting queries (?v=, ?hacstag=) to the resource URL only, so if the 3D
+    // chunk imported the entry itself the card module would be evaluated twice.
+    chunkFileNames: (chunk) => {
+      const names = { index: 'core', 'view-entry': 'scene' };
+      return `sunsynk-power-flow-card-3d-${names[chunk.name] ?? chunk.name}-[hash].js`;
+    },
     sourcemap: true,
   },
-  // The entry exports nothing, so shared code can live in it (no facade chunk).
-  preserveEntrySignatures: false,
   watch: {
     clearScreen: false,
   },

@@ -55,6 +55,7 @@ export class SolarArray {
 	private readonly cellMat: MeshStandardMaterial;
 	private readonly frameMat: MeshStandardMaterial;
 	private readonly overlayMat: MeshBasicMaterial;
+	private rackMat: MeshStandardMaterial | null = null;
 	private readonly geometries: BufferGeometry[] = [];
 	private highlighted: number | null = null;
 	private hovered: number | null = null;
@@ -84,7 +85,10 @@ export class SolarArray {
 				toneMapped: false,
 			}),
 		);
-		const rackMat = mats.get('rack');
+		const rackMat = mats.track(
+			(mats.get('rack') as MeshStandardMaterial).clone(),
+		);
+		this.rackMat = rackMat;
 		const p = three.solar.panel;
 		const facade = three.compass.facade_azimuth;
 		const tech = house.technical.inverter;
@@ -290,9 +294,10 @@ export class SolarArray {
 	setGhost(ghost: boolean): void {
 		if (this.ghost === ghost) return;
 		this.ghost = ghost;
-		for (const m of [this.cellMat, this.frameMat]) {
+		for (const m of [this.cellMat, this.frameMat, this.rackMat]) {
+			if (!m) continue;
 			m.transparent = ghost;
-			m.opacity = ghost ? 0.22 : 1;
+			m.opacity = ghost ? (m === this.rackMat ? 0.12 : 0.22) : 1;
 			m.depthWrite = !ghost;
 			m.needsUpdate = true;
 		}

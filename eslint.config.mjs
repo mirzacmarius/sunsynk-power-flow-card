@@ -38,7 +38,7 @@ export default [
 
   // Demo page and browser tests run code in the page (page.evaluate callbacks)
   {
-    files: ['demo/**/*.js', 'test/e2e/**/*.mjs'],
+    files: ['demo/**/*.js', 'test/e2e/**/*.mjs', 'test/ha/**/*.mjs'],
     languageOptions: {
       globals: {
         ...globals.browser,

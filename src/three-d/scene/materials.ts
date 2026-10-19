@@ -133,10 +133,10 @@ function paverTexture(): Texture {
 
 function lawnTexture(): Texture {
 	const [c, ctx] = canvas(512, 512);
-	ctx.fillStyle = '#5f8f4a';
+	ctx.fillStyle = '#5a8846';
 	ctx.fillRect(0, 0, 512, 512);
-	noise(ctx, 512, 512, 30, 21, 1);
-	noise(ctx, 512, 512, 22, 23, 6);
+	noise(ctx, 512, 512, 18, 21, 1);
+	noise(ctx, 512, 512, 12, 23, 8);
 	const r = rng(17);
 	for (let i = 0; i < 900; i++) {
 		ctx.fillStyle =

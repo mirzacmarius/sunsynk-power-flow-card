@@ -1,5 +1,20 @@
 # Sunsynk Power Flow Card
 
+> **This is the 3D fork** (`custom:sunsynk-power-flow-card-3d`), based on
+> [slipx06/sunsynk-power-flow-card](https://github.com/slipx06/sunsynk-power-flow-card)
+> v7.3.3 (MIT). It keeps the original card and adds an optional, interactive
+> Three.js energy dashboard with `view_mode: 3d`: a model of the house, all solar
+> panels grouped by MPPT, the inverter and battery, and animated energy flows that
+> follow the live Home Assistant values. It registers its own element name, so it
+> runs next to the HACS-installed card.
+>
+> ![3D view](docs/3d/screenshots/01-overview-day.jpg)
+>
+> - [Features and limitations](docs/3d/features.md) · [Configuration](docs/3d/configuration.md) · [Complete example](docs/3d/example-lovelace.yaml)
+> - [Installation](docs/3d/deployment.md) · [Architecture](docs/3d/architecture.md)
+> - [House model and assumptions](docs/3d/model-assumptions.md) · [Verification](docs/3d/verification.md)
+> - Third-party notices: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
+
 An animated Home Assistant card to emulate the power flow that's shown on the Sunsynk Inverter screen. You can use this to display data from many inverters e.g. Sunsynk, Deye, Solis, Lux, FoxESS, Goodwe, Huawei etc as long as you have the required sensor data. See the [wiki](https://github.com/slipx06/sunsynk-power-flow-card/wiki) for integration methods and examples.
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=slipx06&repository=sunsynk-power-flow-card&category=plugin)

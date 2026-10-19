@@ -387,6 +387,7 @@ export class FlowSystem {
 	private scale = 400;
 	private dimmed = new Set<string>();
 	private readonly hiddenPrefixes = new Set<string>();
+	private readonly dimPrefixes = new Set<string>();
 	private focus: string[] | null = null;
 	private visible = true;
 
@@ -436,6 +437,13 @@ export class FlowSystem {
 		this.refade();
 	}
 
+	/** Dim (but keep) every flow whose id starts with `prefix`. */
+	setDimmed(prefix: string, dimmed: boolean): void {
+		if (dimmed) this.dimPrefixes.add(prefix);
+		else this.dimPrefixes.delete(prefix);
+		this.refade();
+	}
+
 	/** Hide every flow whose id starts with `prefix`. */
 	setHidden(prefix: string, hidden: boolean): void {
 		if (hidden) this.hiddenPrefixes.add(prefix);
@@ -451,7 +459,9 @@ export class FlowSystem {
 	private fadeFor(id: string): number {
 		if (!this.visible) return 0;
 		for (const p of this.hiddenPrefixes) if (id.startsWith(p)) return 0;
-		return this.dimmed.has(id) ? 0.18 : 1;
+		if (this.dimmed.has(id)) return 0.18;
+		for (const p of this.dimPrefixes) if (id.startsWith(p)) return 0.3;
+		return 1;
 	}
 
 	private refade(immediate = false): void {
