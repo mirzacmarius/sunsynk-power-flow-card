@@ -625,6 +625,22 @@ try {
     check('render loop pauses when the card is off-screen', paused === false);
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.waitForTimeout(600);
+    const resumed = await page.evaluate(
+      () =>
+        document
+          .querySelector('sunsynk-power-flow-card-3d')
+          .shadowRoot.querySelector('sunsynk-3d-view').manager.running,
+    );
+    check('render loop resumes when the card is back on screen', resumed);
+    // a fast scroll can deliver "left" and "entered" in one batch: the last entry wins
+    const batched = await page.evaluate(() => {
+      const m = document
+        .querySelector('sunsynk-power-flow-card-3d')
+        .shadowRoot.querySelector('sunsynk-3d-view').manager;
+      m.onIntersect([{ isIntersecting: false }, { isIntersecting: true }]);
+      return m.visible && m.running;
+    });
+    check('batched visibility entries use the latest one', batched);
     const disposed = await page.evaluate(async () => {
       const card = document.querySelector('sunsynk-power-flow-card-3d');
       const view = card.shadowRoot.querySelector('sunsynk-3d-view');

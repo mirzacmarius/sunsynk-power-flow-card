@@ -1,6 +1,6 @@
 # Verification
 
-What was run for this version (7.3.3-3d.6), on macOS (Apple M4 Max), Node 24,
+What was run for this version (7.3.3-3d.7), on macOS (Apple M4 Max), Node 24,
 Chrome for Testing (headless, GPU WebGL through ANGLE/Metal), a throwaway Home
 Assistant Core 2026.10.2 and Marius's own Home Assistant (2026.10.2).
 
@@ -23,7 +23,7 @@ statistics, and night mode from `sun.sun`.
 
 ## Browser checks against simulated states (`npm run test:e2e`)
 
-52 / 52, using the demo page with Marius's configuration and simulated states:
+54 / 54, using the demo page with Marius's configuration and simulated states:
 
 - WebGL rendering (≈ 220 draw calls at `high` quality); every flow's activity and
   direction for sunny export, evening discharge (40 W import shown as import),
@@ -39,7 +39,8 @@ statistics, and night mode from `sun.sun`.
 - Classic ↔ 3D switching in place (toolbar, 3D button, repeated `view_mode`
   changes) with exactly one canvas left; leaving 3D disposes the renderer
   (context lost), stops the loop and removes the canvas; the loop pauses when
-  the card is off-screen.
+  the card is off-screen and resumes when it is back, also when the browser
+  reports leaving and entering in one batch.
 - Classic-only configs render the original card and never download the 3D chunk;
   without WebGL the classic card is shown with a notice.
 - Hover tooltip with live inverter values, palette colours in the classic view,
@@ -85,7 +86,7 @@ Installed on 2026-10-19 with his approval, then added to the _Energie_ view of
 
 - Files: `/config/www/sunsynk-power-flow-card-3d/` (the four `.js` files of this
   build, byte-identical to `dist/`). Resource:
-  `/local/sunsynk-power-flow-card-3d/sunsynk-power-flow-card-3d.js?v=7.3.3-3d.6`
+  `/local/sunsynk-power-flow-card-3d/sunsynk-power-flow-card-3d.js?v=7.3.3-3d.7`
   (module). The HACS resource of the upstream card is unchanged; the resource
   list and the dashboard were backed up first (`audit/` in the HA workspace).
 - Dashboard: a full-width _Casa 3D_ section under the existing _Invertor Solis
@@ -126,6 +127,9 @@ This found and fixed real bugs:
 - The AC panel showed a second, untranslated status row (_off · off_); it is now
   a _Mode_ row formatted by Home Assistant, shown only when the device does more
   than on/off (3d.6).
+- After a fast scroll on a phone the scene could stay frozen (here half-way
+  into night mode): the visibility observer read the oldest of a batch of
+  entries. It now uses the latest (3d.7).
 
 ## Not verified
 

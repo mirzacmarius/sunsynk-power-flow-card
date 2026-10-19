@@ -180,6 +180,13 @@ export class SceneManager {
 	private disposed = false;
 	private readonly io: IntersectionObserver;
 	private readonly onVisibility = () => this.updateActive();
+	/** Entries arrive batched (e.g. leaving then entering during a fast scroll): the last one is current. */
+	private readonly onIntersect = (
+		entries: Pick<IntersectionObserverEntry, 'isIntersecting'>[],
+	) => {
+		this.visible = entries[entries.length - 1]?.isIntersecting ?? true;
+		this.updateActive();
+	};
 	private readonly onContextLost = (e: Event) => {
 		e.preventDefault();
 		this.stop();
@@ -281,13 +288,7 @@ export class SceneManager {
 			},
 		);
 
-		this.io = new IntersectionObserver(
-			(entries) => {
-				this.visible = entries[0]?.isIntersecting ?? true;
-				this.updateActive();
-			},
-			{ threshold: 0.01 },
-		);
+		this.io = new IntersectionObserver(this.onIntersect, { threshold: 0.01 });
 		this.io.observe(container);
 		document.addEventListener('visibilitychange', this.onVisibility);
 		this.cb.onStatus({ quality: this.quality, renderer: auto.renderer });
