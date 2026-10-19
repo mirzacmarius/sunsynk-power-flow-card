@@ -1,5 +1,5 @@
 dist/*
-!dist/sunsynk-power-flow-card.js
+!dist/sunsynk-power-flow-card-3d*.js
 
 .devcontainer/*
 !.devcontainer/recommended-devcontainer.json
@@ -94,3 +94,9 @@ undefined/
 
 docs/_build
 _build
+
+# local tooling
+.claude/
+
+# e2e screenshots
+test/e2e/screenshots/

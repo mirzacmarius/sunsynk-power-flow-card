@@ -16,8 +16,10 @@ export const validGridDisconnected = [
 ];
 export const validGridConnected = ['on', '1', 'on-grid', 'on grid', 'ongrid'];
 
-export const EDITOR_NAME = 'sunsynk-content-card-editor';
-export const MAIN_NAME = 'sunsynk-power-flow-card';
+// This fork registers its own element names so it can run next to the HACS-installed
+// upstream card, and upstream updates can never overwrite it.
+export const EDITOR_NAME = 'sunsynk-power-flow-card-3d-editor';
+export const MAIN_NAME = 'sunsynk-power-flow-card-3d';
 
 export const enum SensorDeviceClass {
 	DATE = 'date',

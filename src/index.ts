@@ -1,12 +1,13 @@
 import {
 	CSSResultGroup,
+	html,
 	LitElement,
 	PropertyValues,
 	TemplateResult,
 } from 'lit';
 import { cache } from 'lit/directives/cache.js';
 import { keyed } from 'lit/directives/keyed.js';
-import { customElement, property, query } from 'lit/decorators.js';
+import { customElement, property, query, state } from 'lit/decorators.js';
 import { HomeAssistant, LovelaceCardEditor } from 'custom-card-helpers';
 import { styles } from './style';
 import {
@@ -46,13 +47,16 @@ import {
 	CustomEntity,
 } from './inverters/dto/custom-entity';
 import { icons } from './helpers/icons';
+import { resolveViewMode, ViewMode } from './three-d/config';
+import { webglAvailable } from './three-d/webgl';
 
 console.groupCollapsed(
-	`%c ⚡ SUNSYNK-POWER-FLOW-CARD %c ${localize('common.version')}: ${CARD_VERSION} `,
+	`%c ⚡ SUNSYNK-POWER-FLOW-CARD 3D %c ${localize('common.version')}: ${CARD_VERSION} `,
 	'color: orange; font-weight: bold; background: black',
 	'color: white; font-weight: bold; background: dimgray',
 );
 console.log('Readme:', 'https://github.com/slipx06/sunsynk-power-flow-card');
+console.log('3D fork:', 'view_mode: 3d — see docs/3d/configuration.md');
 console.groupEnd();
 
 @customElement(MAIN_NAME)
@@ -65,6 +69,10 @@ export class SunsynkPowerFlowCard extends LitElement {
 	public set hass(value: HomeAssistant) {
 		const old = this._hass;
 		this._hass = value;
+		// The 3D view tracks its own entities (rooms, lights, sun); hand it every update.
+		const view = this.renderRoot?.querySelector?.('sunsynk-3d-view') as
+			(HTMLElement & { hass?: HomeAssistant }) | null | undefined;
+		if (view) view.hass = value;
 		// Schedule a single update in the next animation frame to coalesce bursts
 		this._scheduleUpdateFromHass(old);
 	}
@@ -115,6 +123,13 @@ export class SunsynkPowerFlowCard extends LitElement {
 
 	// Track last seen HA theme to refresh theme-dependent colours
 	private _lastTheme: string | undefined;
+	private _lastDark: boolean | undefined;
+
+	// 3D view (fork addition): runtime override of view_mode and lazy-load status
+	@state() private _viewOverride: ViewMode | null = null;
+	@state() private _threeDStatus: 'idle' | 'loading' | 'ready' | 'error' =
+		'idle';
+	private _threeDError = '';
 
 	// Precomputed config-derived constants for faster renders
 	private _computed: {
@@ -183,6 +198,12 @@ export class SunsynkPowerFlowCard extends LitElement {
 		if (changedProps.has('hass')) {
 			// Skip hass-driven rerenders while the card is not visible
 			if (!this._isVisible) return false;
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const dark = (this.hass as any)?.themes?.darkMode;
+			if (this._config?.palette && dark !== this._lastDark) {
+				this._lastDark = dark;
+				return true;
+			}
 			if (this._trackedEntityIds.size === 0) return true; // nothing tracked yet
 			let changed = false;
 			for (const id of this._trackedEntityIds) {
@@ -385,6 +406,7 @@ export class SunsynkPowerFlowCard extends LitElement {
 		this._trackedEntityIds.clear();
 		globalData.hass = this.hass;
 		const config = this._config;
+		this._applyPalette(config);
 
 		//Energy
 		const stateDayBatteryDischarge = this.getEntity(
@@ -1005,7 +1027,7 @@ export class SunsynkPowerFlowCard extends LitElement {
 		let inverterImg = '';
 		const inverterSettings = InverterFactory.getInstance(inverterModel);
 		if (!genericInverterImage) {
-			inverterImg = inverterSettings.image;
+			inverterImg = config.inverter_image || inverterSettings.image;
 		}
 
 		let compactMode = false;
@@ -2765,6 +2787,11 @@ export class SunsynkPowerFlowCard extends LitElement {
 			batteryCount,
 		};
 
+		if (this.effectiveViewMode === '3d') {
+			const view = this._render3d(data);
+			if (view) return view;
+		}
+
 		let template: TemplateResult | null = null;
 		let variantKey: 'full' | 'compact' | undefined;
 		if (this.isFullCard) {
@@ -2776,10 +2803,119 @@ export class SunsynkPowerFlowCard extends LitElement {
 		}
 
 		if (template && variantKey) {
-			return cache(keyed(variantKey, template));
+			return this._wrapClassic(cache(keyed(variantKey, template)));
 		}
 
 		return template ?? null;
+	}
+
+	/** `view_mode` from the config, unless switched at runtime with the in-card toggle. */
+	get effectiveViewMode(): ViewMode {
+		return this._viewOverride ?? resolveViewMode(this._config);
+	}
+
+	private _render3d(data: DataDto): TemplateResult | null {
+		if (!webglAvailable() || this._threeDStatus === 'error') return null;
+		if (this._threeDStatus !== 'ready') {
+			return html`<ha-card class="s3d-placeholder">
+				<div class="s3d-loading">${localize('three_d.loading')}</div>
+			</ha-card>`;
+		}
+		return html`<sunsynk-3d-view
+			.hass=${this.hass}
+			.cardConfig=${this._config}
+			.derived=${data}
+			@s3d-switch-view=${(e: CustomEvent) =>
+				(this._viewOverride = e.detail?.view === 'classic' ? 'classic' : '3d')}
+			@s3d-fallback=${() => {
+				this._threeDStatus = 'error';
+				this._threeDError = localize('three_d.webgl_unavailable');
+			}}
+		></sunsynk-3d-view>`;
+	}
+
+	/** Classic card plus, when the config asks for 3D, a button back to 3D or a fallback notice. */
+	private _wrapClassic(classic: unknown): TemplateResult | unknown {
+		if (resolveViewMode(this._config) !== '3d') return classic;
+		let notice = '';
+		if (!webglAvailable()) notice = localize('three_d.webgl_unavailable');
+		else if (this._threeDStatus === 'error')
+			notice = this._threeDError || localize('three_d.load_failed');
+		const canToggle =
+			!notice && this._config.three_d?.show_view_toggle !== false;
+		return html`<div class="s3d-classic">
+			${classic}
+			${
+				canToggle
+					? html`<button
+							class="s3d-toggle"
+							title=${localize('three_d.switch_to_3d')}
+							aria-label=${localize('three_d.switch_to_3d')}
+							@click=${() => (this._viewOverride = '3d')}
+						>
+							3D
+						</button>`
+					: ''
+			}
+			${notice ? html`<div class="s3d-notice">${notice}</div>` : ''}
+		</div>`;
+	}
+
+	private _loadThreeD(): void {
+		if (this._threeDStatus !== 'idle') return;
+		this._threeDStatus = 'loading';
+		import('./three-d/index')
+			.then(() => {
+				this._threeDStatus = 'ready';
+			})
+			.catch((e) => {
+				console.error('sunsynk-power-flow-card-3d: 3D view failed to load', e);
+				this._threeDError = `${localize('three_d.load_failed')} (${e?.message ?? e})`;
+				this._threeDStatus = 'error';
+			});
+	}
+
+	protected updated(changed: PropertyValues): void {
+		super.updated(changed);
+		if (
+			this.effectiveViewMode === '3d' &&
+			this._threeDStatus === 'idle' &&
+			webglAvailable()
+		) {
+			this._loadThreeD();
+		}
+	}
+
+	/**
+	 * Theme-aware colours from `palette: { light: {...}, dark: {...} }`, the same keys the
+	 * sunsynk-card-extras.js resource uses, so the classic view keeps its look in this fork.
+	 */
+	private _applyPalette(cfg: sunsynkPowerFlowCardConfig): void {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const dark = (this.hass as any)?.themes?.darkMode;
+		const p = cfg.palette?.[dark ? 'dark' : 'light'];
+		if (!p) return;
+		const set = (section: string, key: string, value?: string) => {
+			const target = (
+				cfg as unknown as Record<string, Record<string, unknown>>
+			)[section];
+			if (value && target) target[key] = value;
+		};
+		set('solar', 'colour', p.solar);
+		set('battery', 'colour', p.battery);
+		set('battery', 'charge_colour', p.battery_charge);
+		set('load', 'colour', p.load);
+		set('load', 'off_colour', p.grid_off);
+		set('grid', 'colour', p.grid);
+		set('grid', 'no_grid_colour', p.grid_off);
+		set('grid', 'grid_off_colour', p.grid_off);
+		set('inverter', 'colour', p.inverter);
+		const g = this._computed.grid;
+		if (p.grid) {
+			g.importColour = this.colourConvert(p.grid);
+			g.exportColour = this.colourConvert(cfg.grid?.export_colour || p.grid);
+		}
+		if (p.grid_off) g.noGridColour = this.colourConvert(p.grid_off);
 	}
 
 	/**
@@ -3080,7 +3216,15 @@ export class SunsynkPowerFlowCard extends LitElement {
 
 		const customConfig: sunsynkPowerFlowCardConfig = config;
 
+		const previousMode = this._config ? resolveViewMode(this._config) : null;
 		this._config = merge({}, defaultConfig, customConfig);
+		// A config edit that changes view_mode wins over the runtime toggle.
+		if (
+			previousMode !== null &&
+			previousMode !== resolveViewMode(this._config)
+		) {
+			this._viewOverride = null;
+		}
 
 		// Precompute frequently used config-derived values
 		const cfg = this._config;
@@ -3111,15 +3255,24 @@ export class SunsynkPowerFlowCard extends LitElement {
 	}
 
 	getCardSize() {
-		return 2;
+		return this._config && this.effectiveViewMode === '3d' ? 14 : 2;
+	}
+
+	/** Sections dashboards: the 3D dashboard takes the full width by default. */
+	getGridOptions() {
+		return this._config && this.effectiveViewMode === '3d'
+			? { columns: 'full', rows: 'auto', min_columns: 6 }
+			: {};
 	}
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-(window as any).customCards.push({
-	type: 'sunsynk-power-flow-card',
-	name: 'Sunsynk Power Flow Card',
+const w = window as any;
+w.customCards = w.customCards || [];
+w.customCards.push({
+	type: MAIN_NAME,
+	name: 'Sunsynk Power Flow Card 3D',
 	preview: true,
-	description: localize('common.description'),
+	description: `${localize('common.description')} (3D fork)`,
 	configurable: true,
 });

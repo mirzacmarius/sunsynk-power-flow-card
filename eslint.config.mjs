@@ -36,6 +36,25 @@ export default [
     },
   },
 
+  // Demo page and browser tests run code in the page (page.evaluate callbacks)
+  {
+    files: ['demo/**/*.js', 'test/e2e/**/*.mjs'],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+      },
+    },
+  },
+
+  // no-useless-assignment is new in ESLint 10; the upstream card code predates it.
+  {
+    files: ['src/index.ts', 'src/components/**/*.ts'],
+    rules: {
+      'no-useless-assignment': 'off',
+    },
+  },
+
   // TS: temporarily disable problematic rule causing crash
   {
     files: ['**/*.ts'],

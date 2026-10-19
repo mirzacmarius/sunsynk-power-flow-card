@@ -227,7 +227,16 @@
       "gri": "Grid Entities",
       "sensor": "Optional Sensors",
       "bat1": "Battery 1",
-      "bat2": "Battery 2"
-    }
+      "bat2": "Battery 2",
+      "three_d": "3D View"
+    },
+    "view_mode": "View Mode",
+    "three_d": "3D View"
+  },
+  "three_d": {
+    "loading": "Loading 3D view…",
+    "webgl_unavailable": "WebGL is not available in this browser; showing the classic view.",
+    "load_failed": "The 3D view could not be loaded; showing the classic view.",
+    "switch_to_3d": "Switch to the 3D view"
   }
 }

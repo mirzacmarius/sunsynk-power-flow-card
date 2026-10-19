@@ -1,9 +1,10 @@
 import { LovelaceCard, LovelaceCardConfig } from 'custom-card-helpers';
 import { CustomEntity } from './inverters/dto/custom-entity';
+import type { ThreeDUserConfig } from './three-d/config';
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'sunsynk-power-flow-card': LovelaceCard;
+		'sunsynk-power-flow-card-3d': LovelaceCard;
 	}
 }
 
@@ -40,6 +41,15 @@ export enum InverterModel {
 	Victron = 'victron',
 }
 
+export type PaletteKey =
+	| 'solar'
+	| 'battery'
+	| 'battery_charge'
+	| 'load'
+	| 'grid'
+	| 'grid_off'
+	| 'inverter';
+
 export enum CardStyle {
 	Compact = 'compact',
 	Lite = 'lite',
@@ -55,6 +65,15 @@ export enum AutarkyType {
 export interface sunsynkPowerFlowCardConfig extends LovelaceCardConfig {
 	type: string;
 	cardstyle: CardStyle;
+	/** `classic` (default) renders the original SVG card, `3d` the Three.js dashboard */
+	view_mode?: 'classic' | '3d';
+	three_d?: ThreeDUserConfig;
+	/** optional image URL replacing the built-in inverter picture */
+	inverter_image?: string;
+	/** optional theme-aware colours: { light: {...}, dark: {...} } */
+	palette?: Partial<
+		Record<'light' | 'dark', Partial<Record<PaletteKey, string>>>
+	>;
 	wide?: boolean;
 	large_font?: boolean;
 	show_solar: boolean;

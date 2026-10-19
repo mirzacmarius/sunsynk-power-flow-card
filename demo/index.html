@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Sunsynk 3D Demo</title>
+		<style>
+			:root {
+				color-scheme: dark;
+				--primary-text-color: #e5e7eb;
+				--secondary-text-color: #9ca3af;
+				--card-background-color: #111827;
+				--ha-card-background: #111827;
+				--primary-background-color: #0b0f17;
+				--divider-color: rgba(148, 163, 184, 0.2);
+			}
+			body.light {
+				color-scheme: light;
+				--primary-text-color: #111827;
+				--secondary-text-color: #4b5563;
+				--card-background-color: #ffffff;
+				--ha-card-background: #ffffff;
+				--primary-background-color: #eef2f6;
+				--divider-color: rgba(15, 23, 42, 0.12);
+			}
+			* {
+				box-sizing: border-box;
+			}
+			body {
+				margin: 0;
+				font-family: Roboto, system-ui, -apple-system, 'Segoe UI', sans-serif;
+				background: var(--primary-background-color);
+				color: var(--primary-text-color);
+			}
+			header {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 10px 16px;
+				align-items: center;
+				padding: 10px 16px;
+				border-bottom: 1px solid var(--divider-color);
+				font-size: 13px;
+			}
+			header h1 {
+				font-size: 15px;
+				margin: 0 8px 0 0;
+			}
+			label {
+				display: inline-flex;
+				gap: 6px;
+				align-items: center;
+				color: var(--secondary-text-color);
+			}
+			select,
+			button {
+				font: inherit;
+				background: var(--card-background-color);
+				color: var(--primary-text-color);
+				border: 1px solid var(--divider-color);
+				border-radius: 8px;
+				padding: 4px 8px;
+			}
+			main {
+				padding: 16px;
+				display: flex;
+				justify-content: center;
+			}
+			#frame {
+				width: 100%;
+				max-width: 1600px;
+				transition: max-width 0.25s;
+			}
+			#log {
+				font: 12px ui-monospace, monospace;
+				color: var(--secondary-text-color);
+				padding: 0 16px 16px;
+				white-space: pre-wrap;
+			}
+			ha-card {
+				display: block;
+				background: var(--ha-card-background);
+				border-radius: 16px;
+				color: var(--primary-text-color);
+			}
+		</style>
+	</head>
+	<body>
+		<header>
+			<h1>Sunsynk Power Flow Card 3D · demo</h1>
+			<label>Scenario <select id="scenario"></select></label>
+			<label><input type="checkbox" id="jitter" checked /> live values</label>
+			<label>View <select id="view"><option value="3d">3D</option><option value="classic">Classic</option></select></label>
+			<label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+			<label>Language <select id="lang"><option value="en">English</option><option value="ro">Română</option></select></label>
+			<label>Quality <select id="quality"><option>auto</option><option>low</option><option>medium</option><option>high</option></select></label>
+			<label>Motion <select id="motion"><option value="auto">auto</option><option value="true">reduced</option><option value="false">full</option></select></label>
+			<label>Width <select id="width"><option value="1600">Desktop</option><option value="1024">Tablet landscape</option><option value="820">Tablet</option><option value="390">Phone</option></select></label>
+			<button id="stats">Renderer stats</button>
+		</header>
+		<main><div id="frame"></div></main>
+		<div id="log"></div>
+		<script type="module">
+			// Minimal stand-ins for Home Assistant's own elements.
+			if (!customElements.get('ha-card')) customElements.define('ha-card', class extends HTMLElement {});
+			window.customCards = window.customCards || [];
+			const { MockHass, SCENARIOS } = await import('./mock-hass.js');
+			const { CARD_CONFIG } = await import('./demo-config.js');
+			await import('../dist/sunsynk-power-flow-card-3d.js');
+			await customElements.whenDefined('sunsynk-power-flow-card-3d');
+
+			const $ = (id) => document.getElementById(id);
+			const params = new URLSearchParams(location.search);
+			const config = structuredClone(CARD_CONFIG);
+			const mock = new MockHass();
+			const card = document.createElement('sunsynk-power-flow-card-3d');
+			window.card = card;
+			window.mock = mock;
+			$('frame').appendChild(card);
+
+			const applyConfig = () => {
+				config.view_mode = $('view').value;
+				config.three_d.quality = $('quality').value;
+				const m = $('motion').value;
+				config.three_d.reduced_motion = m === 'auto' ? 'auto' : m === 'true';
+				card.setConfig(structuredClone(config));
+			};
+			for (const [k, v] of Object.entries(SCENARIOS)) $('scenario').add(new Option(v.label, k));
+			for (const key of ['scenario', 'view', 'theme', 'lang', 'quality', 'motion', 'width']) {
+				if (params.has(key)) $(key).value = params.get(key);
+			}
+			if (params.get('jitter') === '0') $('jitter').checked = false;
+
+			mock.onChange((hass) => (card.hass = hass));
+			const applyEnv = () => {
+				mock.dark = $('theme').value === 'dark';
+				document.body.classList.toggle('light', !mock.dark);
+				mock.language = $('lang').value;
+				mock.jitter = $('jitter').checked;
+				$('frame').style.maxWidth = `${$('width').value}px`;
+				mock.refresh();
+			};
+			applyConfig();
+			mock.setScenario($('scenario').value);
+			applyEnv();
+
+			$('scenario').onchange = () => mock.setScenario($('scenario').value);
+			for (const id of ['theme', 'lang', 'jitter', 'width']) $(id).onchange = applyEnv;
+			for (const id of ['view', 'quality', 'motion']) $(id).onchange = applyConfig;
+			setInterval(() => $('jitter').checked && mock.refresh(), 2500);
+			document.addEventListener('mock-service-call', (e) => {
+				$('log').textContent = `service call: ${JSON.stringify(e.detail)}\n` + $('log').textContent;
+			});
+			$('stats').onclick = () => {
+				const view = card.shadowRoot?.querySelector('sunsynk-3d-view');
+				$('log').textContent = JSON.stringify(view?.debugInfo?.() ?? 'classic view', null, 1) + '\n' + $('log').textContent;
+			};
+			window.addEventListener('hass-more-info', (e) => {
+				$('log').textContent = `more-info: ${e.detail?.entityId}\n` + $('log').textContent;
+			});
+		</script>
+	</body>
+</html>

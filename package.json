@@ -1,8 +1,8 @@
 {
-  "name": "sunsynk-power-flow-card",
-  "version": "7.3.3",
-  "description": "A customizable Home Assistant card to emulate the Sunsynk System flow that's displayed on the Inverter screen.",
-  "main": "sunsynk-power-flow-card.js",
+  "name": "sunsynk-power-flow-card-3d",
+  "version": "7.3.3-3d.1",
+  "description": "Sunsynk Power Flow Card with an optional interactive Three.js 3D energy dashboard (view_mode: 3d). Fork of slipx06/sunsynk-power-flow-card.",
+  "main": "sunsynk-power-flow-card-3d.js",
   "prettier": {
     "singleQuote": true,
     "jsxSingleQuote": false,
@@ -17,10 +17,15 @@
     "format": "prettier . --write",
     "format:check": "prettier . --check",
     "rollup": "rollup -c",
-    "build": "rollup -c --bundleConfigAsCjs",
+    "build": "node scripts/clean-dist.mjs && rollup -c --bundleConfigAsCjs",
     "watch": "rollup -c --watch",
     "docs-build": "sphinx-autobuild docs docs/_build/html",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p .",
+    "lint:3d": "eslint src/three-d test scripts demo src/index.ts src/editor.ts",
+    "demo": "node scripts/serve-demo.mjs",
+    "test:e2e": "node test/e2e/run.mjs"
   },
   "repository": {
     "type": "git",
@@ -36,7 +41,8 @@
     "@lit-labs/scoped-registry-mixin": "^1.0.3",
     "custom-card-helpers": "^1.9.0",
     "lit": "^3.1.3",
-    "lodash.merge": "^4.6.2"
+    "lodash.merge": "^4.6.2",
+    "three": "0.186.1"
   },
   "devDependencies": {
     "@babel/cli": "^7.24.6",
@@ -46,6 +52,7 @@
     "@babel/plugin-transform-template-literals": "^7.24.1",
     "@babel/preset-env": "^7.24.6",
     "@eslint/js": "^10.0.1",
+    "@mdi/js": "^7.4.47",
     "@rollup/plugin-babel": "^6.0.4",
     "@rollup/plugin-commonjs": "^29.0.0",
     "@rollup/plugin-eslint": "^9.0.5",
@@ -53,6 +60,7 @@
     "@rollup/plugin-node-resolve": "^16.0.0",
     "@rollup/plugin-terser": "^0.4.4",
     "@types/lodash.merge": "^4.6.9",
+    "@types/three": "0.186.0",
     "@typescript-eslint/eslint-plugin": "^8.1.0",
     "@typescript-eslint/parser": "^8.2.0",
     "babel-preset-minify": "^0.5.2",
@@ -63,12 +71,15 @@
     "husky": "^9.0.0",
     "lint-staged": "^16.1.6",
     "npm": "^11.0.0",
+    "playwright-core": "^1.64.1",
     "prettier": "^3.6.2",
     "rollup": "^4.17.2",
     "rollup-plugin-serve": "^3.0.0",
     "rollup-plugin-typescript2": "^0.36.0",
     "typescript": "^5.4.5",
-    "typescript-eslint": "^8.1.0"
+    "typescript-eslint": "^8.1.0",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
   },
   "lint-staged": {
     "*.{js,ts,json,md,yml,yaml}": [

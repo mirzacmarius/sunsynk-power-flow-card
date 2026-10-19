@@ -568,6 +568,18 @@ export class SunSynkCardEditor
 						],
 					},
 					{
+						name: 'view_mode',
+						selector: {
+							select: {
+								mode: 'dropdown',
+								options: [
+									{ label: 'Classic', value: 'classic' },
+									{ label: '3D', value: '3d' },
+								],
+							},
+						},
+					},
+					{
 						name: 'cardstyle',
 						selector: {
 							select: {
@@ -577,6 +589,53 @@ export class SunSynkCardEditor
 								})),
 							},
 						},
+					},
+					{
+						type: 'expandable',
+						title: this._title('three_d'),
+						schema: [
+							{
+								name: 'three_d',
+								type: 'grid',
+								schema: [
+									{
+										name: 'quality',
+										selector: {
+											select: {
+												mode: 'dropdown',
+												options: ['auto', 'low', 'medium', 'high'].map((x) => ({
+													label: capitalize(x),
+													value: x,
+												})),
+											},
+										},
+									},
+									{
+										name: 'night_mode',
+										selector: {
+											select: {
+												mode: 'dropdown',
+												options: ['auto', 'on', 'off'].map((x) => ({
+													label: capitalize(x),
+													value: x,
+												})),
+											},
+										},
+									},
+									{
+										name: 'animation_intensity',
+										selector: {
+											number: { min: 0, max: 2, step: 0.1, mode: 'slider' },
+										},
+									},
+									{ name: 'height', selector: { text: {} } },
+									{ name: 'show_labels', selector: { boolean: {} } },
+									{ name: 'show_idle_paths', selector: { boolean: {} } },
+									{ name: 'solar_overlay', selector: { boolean: {} } },
+									{ name: 'show_view_toggle', selector: { boolean: {} } },
+								],
+							},
+						],
 					},
 					{
 						type: 'expandable',
@@ -1960,7 +2019,7 @@ export class SunSynkCardEditor
 			case 'three_phase': {
 				const on = Boolean(
 					cfg?.inverter &&
-						(cfg.inverter as Record<string, unknown>).three_phase,
+					(cfg.inverter as Record<string, unknown>).three_phase,
 				);
 				const v = on ? '3P' : '1P';
 				return `${base} (${v})`;

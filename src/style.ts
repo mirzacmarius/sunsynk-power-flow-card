@@ -80,6 +80,43 @@ export const styles: CSSResultGroup = css`
 	.remaining-energy {
 		font-size: 9px;
 	}
+
+	/* 3D fork: toggle back to 3D, fallback notice and loading placeholder */
+	.s3d-classic {
+		position: relative;
+	}
+	.s3d-toggle {
+		position: absolute;
+		top: 8px;
+		right: 8px;
+		z-index: 2;
+		border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.3));
+		background: var(--card-background-color, rgba(0, 0, 0, 0.4));
+		color: var(--primary-text-color);
+		border-radius: 999px;
+		padding: 4px 10px;
+		font: 600 12px/1.2 var(--paper-font-body1_-_font-family, inherit);
+		cursor: pointer;
+		opacity: 0.85;
+	}
+	.s3d-toggle:hover,
+	.s3d-toggle:focus-visible {
+		opacity: 1;
+	}
+	.s3d-notice {
+		margin: 6px 8px 8px;
+		font-size: 12px;
+		color: var(--secondary-text-color);
+	}
+	.s3d-placeholder {
+		display: grid;
+		place-items: center;
+		min-height: 320px;
+	}
+	.s3d-loading {
+		font-size: 14px;
+		color: var(--secondary-text-color);
+	}
 `;
 
 export const getDynamicStyles = (data) => html`

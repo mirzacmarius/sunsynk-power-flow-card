@@ -47,14 +47,19 @@ const plugins = [
 ].filter(Boolean);
 
 export default {
-  input: ['./src/index.ts'],
+  input: { 'sunsynk-power-flow-card-3d': './src/index.ts' },
   output: {
-    file: 'dist/sunsynk-power-flow-card.js',
+    // The 3D view (Three.js) is a lazily imported chunk next to the main file, so
+    // classic-only dashboards never download it. Copy the whole dist/ folder.
+    dir: 'dist',
     format: 'esm',
-    name: 'SunsynkPowerFlowCard',
-    inlineDynamicImports: true,
+    entryFileNames: '[name].js',
+    chunkFileNames: (chunk) =>
+      `sunsynk-power-flow-card-3d-${chunk.name === 'index' ? 'scene' : chunk.name}-[hash].js`,
     sourcemap: true,
   },
+  // The entry exports nothing, so shared code can live in it (no facade chunk).
+  preserveEntrySignatures: false,
   watch: {
     clearScreen: false,
   },
