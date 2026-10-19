@@ -18,7 +18,7 @@ The build is four files; copy all of them:
 1. Copy every `.js` file from `dist/` to `/config/www/sunsynk-power-flow-card-3d/`
    on the Home Assistant host (Samba, SSH or the File editor add-on).
 2. Settings → Dashboards → ⋮ → Resources → **Add resource**:
-   - URL: `/local/sunsynk-power-flow-card-3d/sunsynk-power-flow-card-3d.js?v=7.3.3-3d.1`
+   - URL: `/local/sunsynk-power-flow-card-3d/sunsynk-power-flow-card-3d.js?v=7.3.3-3d.2`
    - Resource type: JavaScript module
 3. Reload the browser (or clear the HA app's frontend cache).
 4. Add a card (Manual) and paste your configuration with

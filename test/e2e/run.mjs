@@ -627,6 +627,30 @@ try {
     );
     await page.close();
   }
+  // card-mod walks up the DOM preferring `.host` (ShadowRoot.host); that walk must terminate
+  {
+    const { page } = await open('scenario=sunny_export');
+    const steps = await page.evaluate(() => {
+      const view = document
+        .querySelector('sunsynk-power-flow-card-3d')
+        .shadowRoot.querySelector('sunsynk-3d-view');
+      let n =
+        view.shadowRoot.querySelector('.canvas-host canvas') ??
+        view.shadowRoot.querySelector('.label');
+      let i = 0;
+      while (n && n !== document && i < 1000) {
+        n = n.host || n.parentNode;
+        i++;
+      }
+      return i;
+    });
+    check(
+      'DOM walk through the card terminates (card-mod compatibility)',
+      steps < 1000,
+      `${steps} steps`,
+    );
+    await page.close();
+  }
   // 13. Reduced motion: no particles moving
   {
     const { page } = await open('scenario=sunny_export&motion=true');

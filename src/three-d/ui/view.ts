@@ -117,8 +117,10 @@ export class Sunsynk3DView extends LitElement {
 	@state() private confirm: { device: DeviceSnapshot; action: string } | null =
 		null;
 
-	@query('.canvas-host') private host?: HTMLElement;
-	@query('.stage') private stage?: HTMLElement;
+	// Not named `host`: DOM walkers such as card-mod treat `.host` as ShadowRoot.host and
+	// would loop forever through an element property of that name.
+	@query('.canvas-host') private canvasEl?: HTMLElement;
+	@query('.stage') private stageEl?: HTMLElement;
 
 	private _hass?: HassLike;
 	private three!: ThreeDConfig;
@@ -281,12 +283,12 @@ export class Sunsynk3DView extends LitElement {
 	}
 
 	private initScene(): void {
-		if (this.manager || !this.host) return;
+		if (this.manager || !this.canvasEl) return;
 		this.ensureConfig();
 		const b = this.snapshot?.batteries ?? [];
 		try {
 			this.manager = new SceneManager(
-				this.host,
+				this.canvasEl,
 				this.three,
 				{
 					onHover: (id, p) => {
@@ -328,8 +330,8 @@ export class Sunsynk3DView extends LitElement {
 			const r = entries[0]?.contentRect;
 			if (r) this.manager?.resize(r.width, r.height);
 		});
-		this.resize.observe(this.host);
-		const rect = this.host.getBoundingClientRect();
+		this.resize.observe(this.canvasEl);
+		const rect = this.canvasEl.getBoundingClientRect();
 		this.manager.resize(rect.width, rect.height);
 		this.applyPreset(this.preset, false);
 		if (this.snapshot) this.manager.applySnapshot(this.snapshot);
@@ -547,7 +549,7 @@ export class Sunsynk3DView extends LitElement {
 	private placeLabels(labels: ProjectedLabel[]): void {
 		const root = this.renderRoot as ShadowRoot;
 		const placed: { x0: number; x1: number; y0: number; y1: number }[] = [];
-		const stageW = this.stage?.clientWidth ?? 0;
+		const stageW = this.stageEl?.clientWidth ?? 0;
 		// nearest (lowest on screen) first, so labels further back move up out of the way
 		const items = labels
 			.map((l) => {
@@ -1182,7 +1184,7 @@ export class Sunsynk3DView extends LitElement {
 			}
 		}
 		if (!title) return html``;
-		const stageW = this.stage?.clientWidth ?? 800;
+		const stageW = this.stageEl?.clientWidth ?? 800;
 		const left = Math.min(h.x + 14, stageW - 270);
 		return html`<div
 			class="tooltip"
