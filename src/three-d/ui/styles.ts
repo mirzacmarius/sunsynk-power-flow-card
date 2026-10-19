@@ -75,9 +75,15 @@ export const viewStyles = css`
 		gap: 8px;
 		margin-bottom: 10px;
 	}
-	@container (max-width: 1240px) {
+	/* a tile needs ≈ 190 px for the longest values ("Disconnected", "Deconectată") */
+	@container (max-width: 1599px) {
 		.summary {
 			grid-template-columns: repeat(4, minmax(0, 1fr));
+		}
+	}
+	@container (max-width: 819px) {
+		.summary {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
 		}
 	}
 	.kpi {
@@ -131,6 +137,8 @@ export const viewStyles = css`
 		font-weight: 650;
 		line-height: 1.2;
 		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 	.kpi .val small,
 	.big small {
@@ -192,9 +200,6 @@ export const viewStyles = css`
 	@container (max-width: 520px) {
 		.card {
 			padding: 10px;
-		}
-		.summary {
-			grid-template-columns: repeat(2, minmax(0, 1fr));
 		}
 		.kpi {
 			padding: 8px 10px;

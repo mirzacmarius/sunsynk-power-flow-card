@@ -761,7 +761,7 @@ export class Sunsynk3DView extends LitElement {
 				class="kpi"
 				style="--c:${color}"
 				@click=${() => target && this.select(target)}
-				title=${label}
+				title=${typeof value === 'string' ? `${label}: ${value}` : label}
 			>
 				<span class="badge">${icon(ic, 18)}</span>
 				<span class="txt">

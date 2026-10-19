@@ -1,6 +1,6 @@
 {
   "name": "sunsynk-power-flow-card-3d",
-  "version": "7.3.3-3d.2",
+  "version": "7.3.3-3d.3",
   "description": "Sunsynk Power Flow Card with an optional interactive Three.js 3D energy dashboard (view_mode: 3d). Fork of slipx06/sunsynk-power-flow-card.",
   "main": "sunsynk-power-flow-card-3d.js",
   "prettier": {

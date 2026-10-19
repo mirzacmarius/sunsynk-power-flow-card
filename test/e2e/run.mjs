@@ -458,6 +458,36 @@ try {
     );
     await shot(m.page, '13-phone');
     await m.page.close();
+    // summary tiles fit the longest values ("Disconnected" / "Deconectată") at every width
+    for (const lang of ['en', 'ro']) {
+      const f = await open(`scenario=grid_outage&lang=${lang}`, {
+        width: 1800,
+        height: 1000,
+      });
+      const cut = [];
+      for (const w of [
+        1700, 1600, 1500, 1310, 1100, 900, 820, 700, 600, 521, 390,
+      ]) {
+        cut.push(
+          ...(await f.page.evaluate(async (w) => {
+            document.getElementById('frame').style.maxWidth = `${w}px`;
+            await new Promise((r) => setTimeout(r, 600)); // the demo animates max-width
+            const root = document
+              .querySelector('sunsynk-power-flow-card-3d')
+              .shadowRoot.querySelector('sunsynk-3d-view').shadowRoot;
+            return [...root.querySelectorAll('.kpi .lbl, .kpi .val')]
+              .filter((el) => el.scrollWidth > el.clientWidth + 1)
+              .map((el) => `${w}px "${el.textContent.trim()}"`);
+          }, w)),
+        );
+      }
+      check(
+        `summary tile text fits at every width (${lang})`,
+        cut.length === 0,
+        cut.join(', '),
+      );
+      await f.page.close();
+    }
     const tb = await open('scenario=sunny_export&width=820', {
       width: 820,
       height: 1180,
