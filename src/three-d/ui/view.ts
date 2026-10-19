@@ -73,6 +73,9 @@ interface HassLike {
 	): Promise<unknown>;
 }
 
+/** A screen rectangle in stage pixels. */
+type Box = { x0: number; x1: number; y0: number; y1: number };
+
 const PRESETS: { id: PresetId; key: I18nKey; icon: IconName }[] = [
 	{ id: 'overview', key: 'preset_overview', icon: 'flash' },
 	{ id: 'solar', key: 'preset_solar', icon: 'solar' },
@@ -590,38 +593,52 @@ export class Sunsynk3DView extends LitElement {
 			}
 			const w = el.offsetWidth || 80;
 			const h = el.offsetHeight || 24;
-			// keep labels inside the stage horizontally
-			if (stageW > w + 8)
-				l.x = Math.max(w / 2 + 4, Math.min(stageW - w / 2 - 4, l.x));
-			let y = l.y;
-			for (let guard = 0; guard < 8; guard++) {
-				const box = {
-					x0: l.x - w / 2 - 3,
-					x1: l.x + w / 2 + 3,
-					y0: y - h - 2,
-					y1: y + 2,
-				};
-				const hit = placed.find(
-					(p) =>
-						box.x0 < p.x1 && box.x1 > p.x0 && box.y0 < p.y1 && box.y1 > p.y0,
-				);
-				if (!hit) break;
-				y = hit.y0 - 2;
-			}
-			for (const t of tools)
-				if (
-					l.x - w / 2 - 3 < t.x1 &&
-					l.x + w / 2 + 3 > t.x0 &&
-					y - h - 2 < t.y1
-				)
-					y = Math.max(y, t.y1 + h + 4);
-			placed.push({
-				x0: l.x - w / 2 - 3,
-				x1: l.x + w / 2 + 3,
+			const boxAt = (x: number, y: number) => ({
+				x0: x - w / 2 - 3,
+				x1: x + w / 2 + 3,
 				y0: y - h - 2,
 				y1: y + 2,
 			});
-			el.style.transform = `translate(${Math.round(l.x)}px, ${Math.round(y)}px) translate(-50%, -100%)`;
+			const overlaps = (a: Box, b: Box) =>
+				a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
+			// lowest allowed position at x: below any toolbar group above the label
+			const minYAt = (x: number) => {
+				let m = -Infinity;
+				for (const t of tools)
+					if (x - w / 2 - 3 < t.x1 && x + w / 2 + 3 > t.x0)
+						m = Math.max(m, t.y1 + h + 4);
+				return m;
+			};
+			const free = (x: number, y: number) =>
+				y >= minYAt(x) && !placed.some((p) => overlaps(boxAt(x, y), p));
+			// keep labels inside the stage horizontally
+			let x = l.x;
+			if (stageW > w + 8)
+				x = Math.max(w / 2 + 4, Math.min(stageW - w / 2 - 4, x));
+			let y = Math.max(l.y, minYAt(x));
+			let down = false;
+			for (let guard = 0; guard < 8; guard++) {
+				const hit = placed.find((p) => overlaps(boxAt(x, y), p));
+				if (!hit) break;
+				// move up out of the way; when the toolbar is in the way, sit beside the
+				// other label, else below it
+				if (!down && hit.y0 - 2 >= minYAt(x)) {
+					y = hit.y0 - 2;
+					continue;
+				}
+				const side = [hit.x0 - w / 2 - 3, hit.x1 + w / 2 + 3]
+					.filter((sx) => sx >= w / 2 + 4 && sx <= stageW - w / 2 - 4)
+					.sort((a, b) => Math.abs(a - l.x) - Math.abs(b - l.x))
+					.find((sx) => free(sx, y));
+				if (side !== undefined) {
+					x = side;
+					break;
+				}
+				down = true;
+				y = hit.y1 + h + 2;
+			}
+			placed.push(boxAt(x, y));
+			el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) translate(-50%, -100%)`;
 		}
 	}
 

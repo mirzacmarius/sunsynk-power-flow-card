@@ -94,7 +94,7 @@ async function open(query = '', viewport = { width: 1440, height: 900 }, init) {
   return { page, errors };
 }
 
-/** Visible 3D labels that overlap a toolbar group, a preset chip or the legend. */
+/** Visible 3D labels that overlap each other, a toolbar group, a preset chip or the legend. */
 const labelClashes = (page) =>
   page.evaluate(() => {
     const root = document
@@ -114,7 +114,19 @@ const labelClashes = (page) =>
         );
     const overlays = rects('.toolbar .group, .presets .chip, .legend');
     const out = [];
-    for (const [l, a] of rects('.labels .label'))
+    const labels = rects('.labels .label');
+    labels.forEach(([l, a], i) =>
+      labels.slice(i + 1).forEach(([k, b]) => {
+        if (
+          a.left < b.right - 1 &&
+          a.right > b.left + 1 &&
+          a.top < b.bottom - 1 &&
+          a.bottom > b.top + 1
+        )
+          out.push(`${l.dataset.id} × ${k.dataset.id}`);
+      }),
+    );
+    for (const [l, a] of labels)
       for (const [o, b] of overlays)
         if (
           a.left < b.right - 1 &&
@@ -489,7 +501,7 @@ try {
       `overflow ${overflow}px`,
     );
     check(
-      'phone: 3D labels stay clear of the toolbar and preset chips',
+      'phone: 3D labels stay clear of each other, the toolbar and chips',
       (await labelClashes(m.page)).length === 0,
       (await labelClashes(m.page)).join(', '),
     );
@@ -530,7 +542,7 @@ try {
       height: 1180,
     });
     check(
-      'tablet: 3D labels stay clear of the toolbar and preset chips',
+      'tablet: 3D labels stay clear of each other, the toolbar and chips',
       (await labelClashes(tb.page)).length === 0,
       (await labelClashes(tb.page)).join(', '),
     );
