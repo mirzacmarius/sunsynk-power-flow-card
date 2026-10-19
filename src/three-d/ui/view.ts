@@ -71,6 +71,9 @@ interface HassLike {
 		service: string,
 		data?: Record<string, unknown>,
 	): Promise<unknown>;
+	/** HA's own localised state text (frontend 2023.9+) */
+	formatEntityState?(stateObj: unknown): string;
+	formatEntityAttributeValue?(stateObj: unknown, attribute: string): string;
 }
 
 /** A screen rectangle in stage pixels. */
@@ -1705,6 +1708,21 @@ export class Sunsynk3DView extends LitElement {
 		</div>`;
 	}
 
+	/** What a device is doing beyond on/off ("Heat · Heating", "Playing"), in HA's language when HA can format it. */
+	private deviceMode(d: DeviceSnapshot): string | null {
+		if (!d.stateText) return null;
+		if (d.stateText.split(' · ').every((p) => p === 'on' || p === 'off'))
+			return null;
+		const h = this._hass;
+		const so = d.stateEntity ? h?.states[d.stateEntity] : undefined;
+		if (!so || !h?.formatEntityState) return d.stateText;
+		const mode = h.formatEntityState(so);
+		return typeof so.attributes?.hvac_action === 'string' &&
+			h.formatEntityAttributeValue
+			? `${mode} · ${h.formatEntityAttributeValue(so, 'hvac_action')}`
+			: mode;
+	}
+
 	private renderDevice(d: DeviceSnapshot | undefined): TemplateResult {
 		const t = this.t;
 		if (!d) return html``;
@@ -1713,6 +1731,7 @@ export class Sunsynk3DView extends LitElement {
 			d.on === null
 				? '—'
 				: `${d.on ? t('on') : t('off')}${d.onSource === 'power' ? ` (${t('by_power')})` : ''}`;
+		const extra = this.deviceMode(d);
 		const c = d.control;
 		const actionLabel =
 			c?.action === 'turn_on'
@@ -1725,7 +1744,7 @@ export class Sunsynk3DView extends LitElement {
 			<div class="big" style="margin-bottom:8px">${fmt(this.p(d.power))}</div>
 			<div class="rows">
 				${this.row(t('status'), html`<span class="status" style="--c:${d.on ? 'var(--s3d-ok)' : 'var(--s3d-text-2)'}">${state}</span>`, d.stateEntity)}
-				${d.stateText && d.stateText.toLowerCase() !== state.toLowerCase() && d.stateText !== 'on' && d.stateText !== 'off' ? this.row(t('status'), d.stateText, d.stateEntity) : nothing}
+				${extra ? this.row(t('mode'), extra, d.stateEntity) : nothing}
 				${this.row(t('daily_energy'), fmt(this.e(d.energyToday)), d.energyToday.entityId)}
 				${d.energyTotal.configured ? this.row(`${t('daily_energy').split(' ')[0]} (${t('total')})`, fmt(this.e(d.energyTotal)), d.energyTotal.entityId) : nothing}
 				${d.temperature.configured ? this.row(t('temperature'), fmt(this.v(d.temperature)), d.temperature.entityId) : nothing}

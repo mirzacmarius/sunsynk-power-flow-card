@@ -338,6 +338,21 @@ try {
       'device detail panel opens',
       text.includes('Daikin Parter') && text.includes('Toggle'),
     );
+    const panelRows = () =>
+      page.evaluate(() =>
+        [
+          ...document
+            .querySelector('sunsynk-power-flow-card-3d')
+            .shadowRoot.querySelector('sunsynk-3d-view')
+            .shadowRoot.querySelectorAll('.panel .rows > *'),
+        ].map((r) => r.textContent.replace(/\s+/g, ' ').trim()),
+      );
+    const rowsOn = await panelRows();
+    check(
+      'a running AC shows its mode and action',
+      rowsOn[rowsOn.indexOf('Mode') + 1] === 'heat · heating',
+      rowsOn.join(' | '),
+    );
     await clickIn3d(page, '.btn.primary', 'Toggle');
     await page.waitForTimeout(200);
     text = await viewText(page);
@@ -366,6 +381,21 @@ try {
       text.includes('TV') && !text.includes('Toggle'),
     );
     await shot(page, '10-device-detail');
+    // an AC that is off shows only its on/off status, not "off · off"
+    await page.evaluate(() => window.mock.setScenario('sunny_export'));
+    await page.evaluate(() =>
+      document
+        .querySelector('sunsynk-power-flow-card-3d')
+        .shadowRoot.querySelector('sunsynk-3d-view')
+        .debugSelect('device:hol_etaj_daikin_etaj'),
+    );
+    await page.waitForTimeout(600);
+    const rowsOff = await panelRows();
+    check(
+      'an AC that is off has no mode row',
+      rowsOff.includes('Status') && !rowsOff.includes('Mode'),
+      rowsOff.join(' | '),
+    );
     check(
       'no console errors (interactions)',
       errors.length === 0,
