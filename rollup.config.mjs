@@ -13,7 +13,9 @@ const plugins = [
     main: true,
   }),
   commonjs(),
-  typescript(),
+  // Explicit include: picomatch 4 no longer matches rpt2's default `*.ts+(|x)` glob,
+  // which made the plugin skip every TypeScript file.
+  typescript({ include: ['*.ts', '**/*.ts'] }),
   json(),
   babel({
     exclude: 'node_modules/**',
